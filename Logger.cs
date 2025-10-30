@@ -12,6 +12,11 @@ namespace FolderClonningTestApp
 
         public Logger(string logDirectory)
         {
+            if (string.IsNullOrWhiteSpace(logDirectory))
+            {
+                throw new ArgumentException("Log directory path cannot be empty.");
+            }
+
             if (Path.GetPathRoot(logDirectory) == logDirectory)
             {
                 logDirectory = Path.Combine(logDirectory, "Logs");
@@ -26,8 +31,8 @@ namespace FolderClonningTestApp
 
             if (!File.Exists(logFilePath))
             {
-                using (FileStream file = File.Create(logFilePath)) { }
-            }
+                File.Create(logFilePath).Close();
+            }    
         }
 
         public void Log(string message)

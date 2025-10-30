@@ -19,12 +19,12 @@ namespace FolderClonningTestApp
         private string destinationPath;
         private Logger logger;
 
-        public DataCopy(string sourcePath, string destinationPath, string logPath)
+        public DataCopy(string sourcePath, string destinationPath, Logger logger)
         {
 
             this.sourcePath = sourcePath;
             this.destinationPath = destinationPath;
-            this.logger = new Logger(logPath);
+            this.logger = logger;
         }
 
         public void SyncFolders()
@@ -52,8 +52,8 @@ namespace FolderClonningTestApp
 
             foreach (string destFile in allFiles)
             {
-                string relativePath = GetRelativePath(destinationPath, destFile);
-                string sourceFile = Path.Combine(sourcePath, relativePath.TrimStart('\\', '/'));
+                string relativePath = Path.GetRelativePath(destinationPath, destFile);
+                string sourceFile = Path.Combine(sourcePath, relativePath);
 
                 if (!File.Exists(sourceFile))
                 {
@@ -66,8 +66,8 @@ namespace FolderClonningTestApp
 
             foreach (string destDir in allDirs)
             {
-                string relativePath = GetRelativePath(destinationPath, destDir);
-                string sourceDir = Path.Combine(sourcePath, relativePath.TrimStart('\\', '/'));
+                string relativePath = Path.GetRelativePath(destinationPath, destDir);
+                string sourceDir = Path.Combine(sourcePath, relativePath);
 
                 if (!Directory.Exists(sourceDir))
                 {
@@ -87,8 +87,8 @@ namespace FolderClonningTestApp
 
             foreach (string dir in allDirs)
             {
-                string relativePath = GetRelativePath(sourcePath, dir);
-                string targetDir = Path.Combine(destinationPath, relativePath.TrimStart('\\', '/'));
+                string relativePath = Path.GetRelativePath(sourcePath, dir);
+                string targetDir = Path.Combine(destinationPath, relativePath);
 
                 if (!Directory.Exists(targetDir))
                 {
@@ -102,9 +102,9 @@ namespace FolderClonningTestApp
             string[] files = Directory.GetFiles(sourceFolder, "*.*");
 
             foreach (string file in files)
-            {
-                string relativePath = GetRelativePath(sourcePath, file);
-                string destinationFile = Path.Combine(destinationPath, relativePath.TrimStart('\\', '/'));
+            {                string relativePath = Path.GetRelativePath(sourcePath, file);
+                string destinationFile = Path.Combine(destinationPath, relativePath);
+
 
                 CopyFile(file, destinationFile);
             }
@@ -112,34 +112,46 @@ namespace FolderClonningTestApp
 
         private void CopyFile(string sourceFile, string destinationFile)
         {
-            FileInfo sourceInfo = new FileInfo(sourceFile);
-            FileInfo destInfo = new FileInfo(destinationFile);
-
-            if (File.Exists(destinationFile))
+            try
             {
-                if (sourceInfo.Length != destInfo.Length ||
-                    sourceInfo.LastWriteTime != destInfo.LastWriteTime)
+                FileInfo sourceInfo = new FileInfo(sourceFile);
+
+                if (File.Exists(destinationFile))
                 {
-                    File.Copy(sourceFile, destinationFile, true);
-                    logger.Log($"Updated file: {destinationFile}");
+                    FileInfo destInfo = new FileInfo(destinationFile);
+
+                    if(sourceInfo.Length != destInfo.Length || GetFileHash(sourceFile) != GetFileHash(destinationFile))
+                    {
+                        File.Copy(sourceFile, destinationFile, true);
+                        logger.Log($"Updated file: {destinationFile}");
+                    }
+                }
+                else
+                {
+                    File.Copy(sourceFile, destinationFile);
+                    logger.Log($"Copied new file: {destinationFile}");
                 }
             }
-            else
+            catch (Exception ex)
             {
-                File.Copy(sourceFile, destinationFile);
-                logger.Log($"Copied new file: {destinationFile}");
+                logger.Log($"Failed to copy file {sourceFile} to {destinationFile}: {ex.Message}");
             }
         }
 
-        private string GetRelativePath(string basePath, string fullPath)
+        private string GetFileHash(string filePath)
         {
-            if (basePath.EndsWith("\\") || basePath.EndsWith("/"))
-                basePath = basePath.TrimEnd('\\', '/');
+            MD5 md5 = MD5.Create();
+            FileStream stream = File.OpenRead(filePath);
+            byte[] hashBytes = md5.ComputeHash(stream);
+            stream.Close();
 
-            if (fullPath.StartsWith(basePath))
-                return fullPath.Substring(basePath.Length);
-            else
-                return fullPath;
+            string hash = "";
+            for (int i = 0; i < hashBytes.Length; i++)
+            {
+                hash += hashBytes[i].ToString("x2");
+            }
+
+            return hash;
         }
     }
 }

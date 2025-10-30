@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "FolderClonningTestApp": {
+      "commandName": "Project",
+      "commandLineArgs": "C:\\TestFolder C:\\CopyFOlder 30 C:\\Logs"
+    }
+  }
+}
